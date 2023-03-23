@@ -5,16 +5,16 @@ go 1.20
 require (
 	github.com/aws/aws-sdk-go-v2 v1.17.6
 	github.com/aws/aws-sdk-go-v2/config v1.18.18
+	github.com/aws/aws-sdk-go-v2/credentials v1.13.17
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.30.6
+	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.6.1
 	k8s.io/apimachinery v0.26.3
-	k8s.io/client-go v0.26.3
 	sigs.k8s.io/controller-runtime v0.14.5
 )
 
 require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.13.17 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.0 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.30 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.24 // indirect
@@ -74,6 +74,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.26.3 // indirect
 	k8s.io/apiextensions-apiserver v0.26.1 // indirect
+	k8s.io/client-go v0.26.3 // indirect
 	k8s.io/component-base v0.26.1 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect

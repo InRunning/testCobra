@@ -12,7 +12,7 @@ var cmdPcap = &cobra.Command{
 func NewCmdPcap() *cobra.Command {
 
 	cmd := cmdPcap
-	cmd.AddCommand(cmdLs)
+	cmd.AddCommand(NewCmdLs())
 	// cmdPcap.AddCommand(cmdDelete)
 
 	return cmd
