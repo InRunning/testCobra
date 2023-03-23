@@ -8,16 +8,19 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"regexp"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 )
 
 var (
-	namespaces      string
-	tracesessionIds string
+	namespace      string
+	tracesessionId string
 )
 
 type BucketFile struct {
@@ -44,8 +47,10 @@ func NewCmdLs() *cobra.Command {
 	cmd := cmdLs
 	f := cmd.Flags()
 
-	f.StringVar(&namespaces, "namespace", "", " Specify which namespace to list pcap files, if not set, it will retrieve all namespaces")
-	f.StringVar(&tracesessionIds, "tracesessionId", "", "Specify which tracesession to list pcap ifles, if not set, it will retrieve all tracession")
+	var namespace string
+	var tracesessionId string
+	f.StringVar(&namespace, "namespace", "", " Specify which namespace to list pcap files, if not set, it will retrieve all namespace")
+	f.StringVar(&tracesessionId, "tracesessionId", "", "Specify which tracesession to list pcap ifles, if not set, it will retrieve all tracession")
 	flag.Parse()
 	return cmdLs
 }
@@ -86,30 +91,6 @@ func GetBucketFiles(ctx context.Context) ([]BucketFile, error) {
 	if err != nil {
 		log.Fatal(err)
 		return nil, err
-	}
-
-	var namespaceList []string
-	var tracesessionIdList []string
-	fmt.Println("namespaces: ", namespaces)
-	fmt.Println("tracesessionIds: ", tracesessionIds)
-
-	if namespaces != "" {
-		// Split the string using comma separator
-		parts := strings.Split(namespaces, ",")
-
-		// Trim spaces from each part
-		for _, part := range parts {
-			namespaceList = append(namespaceList, strings.TrimSpace(part))
-		}
-	}
-	if tracesessionIds != "" {
-		// Split the string using comma separator
-		parts := strings.Split(tracesessionIds, ",")
-
-		// Trim spaces from each part
-		for _, part := range parts {
-			tracesessionIdList = append(tracesessionIdList, strings.TrimSpace(part))
-		}
 	}
 
 	bucketFiles, err := GetAllFileNames(ctx, client)
@@ -178,8 +159,55 @@ func listFileNames(ctx context.Context) error {
 }
 
 func GetAllFileNames(ctx context.Context, k8sClient client.Client) ([]BucketFile, error) {
-	k8sClient, err := GetK8sClient()
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		log.Error("can't get config, error: ", err)
+		return nil, err
+	}
+	dynamicClient := dynamic.NewForConfigOrDie(config)
 
+	// Specify the group, version and resource name
+	smf := schema.GroupVersionResource{
+		Group:    "smf.axyom.casa-systems.io",
+		Version:  "v1alpha1",
+		Resource: "SMF",
+	}
+	upf := schema.GroupVersionResource{
+		Group:    "nfs.axyom.casa-systems.io",
+		Version:  "v1alpha1",
+		Resource: "UPF",
+	}
+
+	// Retrieve CRD instances
+	smfInstanceList, err := dynamicClient.Resource(smf).Namespace(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		log.Error("there is no smf instance, error: ", err)
+		return nil, err
+	}
+	upfInstanceList, err := dynamicClient.Resource(upf).Namespace(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		log.Error("there is no smf instance, error: ", err)
+		return nil, err
+	}
+
+	for _, item := range smfInstanceList.Items {
+		fmt.Println("smf instance item: ")
+		fmt.Println("%+v\n", item)
+	}
+	for _, item := range upfInstanceList.Items {
+		fmt.Println("upf instance item: ")
+		fmt.Println("%+v\n", item)
+	}
+
+	// Get the CRDs and print their names
+	list, err := resource.Do().Get().List(v1.ListOptions{})
+	if err != nil {
+		fmt.Println("Could not list CRDs")
+		panic(err.Error())
+	}
+	for _, item := range list.Items {
+		fmt.Printf("CRD name: %s\n", item.GetName())
+	}
 	if err != nil {
 		log.Error("unable to get k8s client, error: ", err)
 		return nil, err
