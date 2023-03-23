@@ -8,7 +8,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"regexp"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 )
 
@@ -45,6 +48,34 @@ func NewCmdLs() *cobra.Command {
 	f.StringVar(&tracesessionIds, "tracesessionId", "", "Specify which tracesession to list pcap ifles, if not set, it will retrieve all tracession")
 	flag.Parse()
 	return cmdLs
+}
+
+func GetFileList(ctx context.Context) ([]BucketFile, error) {
+	log.Info("execute to get file list")
+	var namespaceList []string
+	var tracesessionIdList []string
+	fmt.Println("namespaces: ", namespaces)
+	fmt.Println("tracesessionIds: ", tracesessionIds)
+
+	if namespaces != "" {
+		// Split the string using comma separator
+		parts := strings.Split(namespaces, ",")
+
+		// Trim spaces from each part
+		for _, part := range parts {
+			namespaceList = append(namespaceList, strings.TrimSpace(part))
+		}
+	}
+	if tracesessionIds != "" {
+		// Split the string using comma separator
+		parts := strings.Split(tracesessionIds, ",")
+
+		// Trim spaces from each part
+		for _, part := range parts {
+			tracesessionIdList = append(tracesessionIdList, strings.TrimSpace(part))
+		}
+	}
+	bucketFiles, err := GetAllFileNames(ctx, client)
 }
 
 func GetBucketFiles(ctx context.Context) ([]BucketFile, error) {
@@ -146,18 +177,21 @@ func listFileNames(ctx context.Context) error {
 	return nil
 }
 
-func GetAllFileNames(ctx context.Context, client *s3.Client) ([]BucketFile, error) {
-	buckets, err := client.ListBuckets(ctx, &s3.ListBucketsInput{})
+func GetAllFileNames(ctx context.Context, k8sClient client.Client) ([]BucketFile, error) {
+	k8sClient, err := GetK8sClient()
+
 	if err != nil {
-		log.Fatal(err)
+		log.Error("unable to get k8s client, error: ", err)
 		return nil, err
 	}
-	var bucketNames []string
-	for _, bucket := range buckets.Buckets {
-		if bucket.Name != nil {
-			bucketNames = append(bucketNames, *bucket.Name)
-		}
-	}
+	crd := &unstructured.Unstructured{}
+	// create API resource reference
+	crd.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "smf.axyom.casa-systems.io",
+		Version: "v1alpha1",
+		Kind:    "SMF",
+	})
+
 	var bucketFiles []BucketFile
 	for _, bucketName := range bucketNames {
 		// Get the first page of results for ListObjectsV2 for a bucket

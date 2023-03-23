@@ -20,6 +20,16 @@ type S3Config struct {
 	Endpoint        string
 }
 
+func GetK8sClient() (client.Client, error) {
+	log.Info("get k8s client")
+	k8sClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: runtime.NewScheme()})
+	if err != nil {
+		log.Error("unable to get k8s client, error: ", err)
+		return nil, err
+	}
+	return k8sClient, nil
+}
+
 func GetS3Config() (*S3Config, error) {
 	log.Error("获取config")
 	k8sClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: runtime.NewScheme()})
